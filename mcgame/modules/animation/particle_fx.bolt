@@ -1,0 +1,89 @@
+import numpy as np
+import lib:global/utils as utils
+
+class ParametricCurve:
+    def __init__(self, function, init, final):
+        self.function = function
+        self.init = init
+        self.final = final
+
+    def transform(self, matrix):
+        def linear_transform(t):
+            return np.matmul(matrix, self.function(t))
+        return ParametricCurve(linear_transform, self.init, self.final)
+
+    def displace(self, vector):
+        def displacement(t):
+            return self.function(t) + vector
+        return ParametricCurve(displacement, self.init, self.final)
+
+    def draw(self, n):
+        out = []
+        step_size = (self.final - self.init) / (n - 1)
+        param = self.init
+        for t in range(n):
+            out.append(self.function(param))
+            param += step_size
+        return out
+
+
+class ParametricSurface:
+    def __init__(self, function, init_t, final_t, init_u, final_u):
+        self.function = function
+        self.init_t = init_t
+        self.final_t = final_t
+        self.init_u = init_u
+        self.final_u = final_u
+
+
+class CurveParticleEffect:
+    def __init__(self, texture, curve, velocity, amount):
+        self.texture = texture
+        self.curve = curve
+        self.velocity = velocity
+        self.amount = amount
+
+    def play(self, viewer="@a"):
+        pos_list = self.curve.draw(self.amount)
+        if isinstance(self.velocity, ParametricCurve):
+            vel_list = self.velocity.draw(self.amount)
+        else:
+            vel_list = []
+            for point in pos_list:
+                vel_list.append(self.velocity(point))
+        for n in range(len(pos_list)):
+            x = pos_list[n][0]
+            y = pos_list[n][1]
+            z = pos_list[n][2]
+            vx = vel_list[n][0]
+            vy = vel_list[n][1]
+            vz = vel_list[n][2]
+            target = utils.selector(viewer)
+            particle self.texture ~x ~y ~z vx vy vz 1 0 force target
+
+
+class OrientedCurveParticleEffect:
+    def __init__(self, texture, curve, amount):
+        self.texture = texture
+        self.curve = curve
+        self.amount = amount
+
+    def play(self, viewer="@a"):
+        pos_list = self.curve.draw(self.amount)
+        for point in pos_list:
+            x = point[0]
+            y = point[1]
+            z = point[2]
+            target = utils.selector(viewer)
+            particle self.texture ^x ^y ^z 0 0 0 1 0 force target
+
+class SurfaceParticleEffect:
+    def __init__(self, texture, surface, velocity, amount, facing=None):
+        self.texture = texture
+        self.surface = surface
+        self.velocity = velocity
+        self.amount = amount
+        self.facing = facing
+
+    def play(self):
+        pass

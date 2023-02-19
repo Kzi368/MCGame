@@ -1,0 +1,18 @@
+from bolt_expressions import Scoreboard, identifier_generator
+
+identifiers = identifier_generator(ctx)
+
+# Crea un fake player único
+def mk_unique_player(obj):
+  return obj["#" + next(identifiers)]
+
+# Crea un scoreboard
+def mk(name, objective="dummy"):
+    scoreboard objectives add name objective
+
+# Elimina un scoreboard
+def rm(name):
+    scoreboard objectives remove name
+
+
+

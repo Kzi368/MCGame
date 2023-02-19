@@ -1,0 +1,22 @@
+from beet.library.data_pack import Predicate
+from bolt_expressions import Scoreboard, identifier_generator
+
+CURRENT_PATH = ctx.directory / "src/data/lib/modules/global"
+NAMESPACE = f"mcgame:random"
+predicates = ctx.data.predicates
+
+def random_chance(odds):
+    name = f"{NAMESPACE}/{odds}"
+    predicates[name] = Predicate(f'{{"condition": "minecraft:random_chance","chance": {odds}}}')
+    return name
+
+def random_int(min, max, score):
+    if min == max:
+        score = max
+        return
+    total = max - min + 1
+    score = min
+    if predicate random_chance((total - 1)/total):
+        random_int(min + 1, max, score)
+
+    

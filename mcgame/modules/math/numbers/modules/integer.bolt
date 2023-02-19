@@ -1,0 +1,77 @@
+from bolt_expressions import Scoreboard
+import lib:scoreboard as scb
+
+value = Scoreboard.objective("value")
+count = Scoreboard.objective("debug_cmd_count")
+
+def sign(n):
+    count["-sign"] += 1
+    output = scb.mk_unique_player(value)
+    input = value["#sign.input"]
+
+    input = n
+    output = -1
+    if score var input matches 0..:
+        output = 1
+    
+    return output
+
+def abs(n):
+    count["-abs"] += 1
+    output = scb.mk_unique_player(value)
+    input = value["#abs.input"]
+
+    input = n
+    output = input
+    if score var input matches ..-1:
+        output *= -1
+
+    return output
+
+def length(n):
+    count["-length"] += 1
+    input, result = value["#length.input", "#length.result"]
+
+    input = abs(n)
+    result = 1
+    unless score var input matches ..9 function lib:helpers/length_aux1:
+        result += 1
+        input /= 10
+        unless score var input matches ..9 function lib:helpers/length_aux1
+
+    output = scb.mk_unique_player(value)
+    output = result
+    return output
+
+def power(n, m):
+    count["-power"] += 1
+    base, exponent, result = value["#power.base", "#power.exponent", "#power.result"]
+
+    base = n
+    exponent = m
+    result = 1
+    if score var exponent matches 1.. function lib:helpers/power_aux1:
+        exponent -= 1
+        result *= base
+        if score var exponent matches 1.. function lib:helpers/power_aux1
+    
+    output = scb.mk_unique_player(value)
+    output = result
+    return output
+
+def digit(n, pos):
+    count["-digit"] += 1
+    output = scb.mk_unique_player(value)
+    input, position = value["#digit.input", "#digit.pos"]
+    crop = value["#digit.crop"]
+
+    input = abs(n)
+    position = pos
+    crop = power(10, position)
+    output = (input / crop) % 10
+
+    return output
+    
+    
+    
+    

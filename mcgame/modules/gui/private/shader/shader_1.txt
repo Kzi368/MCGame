@@ -1,0 +1,13 @@
+{
+    "blend": {
+        "func": "add",
+        "srcrgb": "one",
+        "dstrgb": "zero"
+    },
+    "vertex": "toggler/shader",
+    "fragment": "toggler/shader",
+    "attributes": [ "Position" ],
+    "samplers": [
+        { "name": "DiffuseSampler" },
+        { "name": "ControlSampler" },
+        { "name": "DiffuseDepthSampler" }

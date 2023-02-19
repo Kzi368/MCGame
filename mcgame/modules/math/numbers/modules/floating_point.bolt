@@ -1,0 +1,199 @@
+from bolt_expressions import Scoreboard
+import lib:scoreboard as scb
+import lib:integer as int
+precision = 4 # ACA VA LA RESOLUCION DEL CONFIG
+
+value = Scoreboard.objective("value")
+float_sig = Scoreboard.objective("significand")
+float_exp = Scoreboard.objective("exponent")
+count = Scoreboard.objective("debug_cmd_count")
+
+class Float:
+    def __init__(self, sig, exp):
+        self.sig = sig
+        self.exp = exp
+    
+    def generate(self, name):
+        float_sig[name] = self.sig
+        float_exp[name] = self.exp
+    
+    def sign(self):
+        return int.sign(self.sig)
+
+    def length(self):
+        return int.length(self.sig)
+    
+    def digit(self, n):
+        return int.digit(self.sig, n)
+
+    def shift(self, n):
+        count["-shift"] += 1
+        in_sig, result_sig = float_sig["#shift.in.sig", "#shift.res.sig"]
+        in_exp, result_exp = float_exp["#shift.in.exp", "#shift.res.exp"]
+        in_sign, disp = value["#shift.in.sign", "#shift.displace"]
+
+        in_sig = int.abs(self.sig)
+        in_exp = self.exp
+        in_sign = self.sign()
+        disp = n
+        result_exp = in_exp + disp
+
+        if score var disp matches 0..:
+            result_sig = (in_sig / int.power(10, disp)) * in_sign
+        if score var disp matches ..-1:
+            result_sig = (in_sig * int.power(10, (-1) * disp)) * in_sign
+            
+        out_sig = scb.mk_unique_player(float_sig)
+        out_exp = scb.mk_unique_player(float_exp)
+        out_sig = result_sig
+        out_exp = result_exp
+        return float(out_sig, out_exp)
+
+    def normalize(self):
+        in_sig, result_sig = float_sig["#normalize.in.sig", "#normalize.result.sig"]
+        in_exp, result_exp = float_exp["#normalize.in.exp", "#normalize.result.exp"]
+        in_sign, in_len = value["#normalize.in.sign", "#normalize.in.length"]
+
+        in_sig = int.abs(self.sig)
+        in_exp = self.exp
+        in_sign = self.sign()
+        in_len = self.length()
+        result_sig = self.sig
+        result_exp = self.exp
+
+        if score var in_sig matches 0:
+            result_sig = 0
+            result_exp = 0
+        unless score var in_sig matches 0 unless score var in_len matches (precision + 1):
+            out = self.shift(in_len - precision - 1)
+            result_sig = out.sig
+            result_exp = out.exp
+        
+        out_sig = scb.mk_unique_player(float_sig)
+        out_exp = scb.mk_unique_player(float_exp)
+        out_sig = result_sig
+        out_exp = result_exp
+        return float(out_sig, out_exp) 
+    
+    def round(self):
+        result_sig = float_sig["#round.res.sig"]
+        result_exp = float_exp["#round.res.exp"]
+        in_sign, in_len, digit, position = value["#round.in.sign", "#round.in.length", "#round.digit", "#round.position"]
+
+        result_sig = int.abs(self.sig)
+        result_exp = self.exp
+        in_len = self.length()
+        in_sign = self.sign()
+        position = in_len - precision - 2
+        
+        digit = 0
+        if score var position matches 0..:
+            digit = self.digit(position)
+            aux1 = value["#round.aux1"]
+            aux1 = int.power(10, position + 1)
+            if score var digit matches 5..:
+                result_sig += aux1
+            result_sig /= aux1
+            result_exp += position + 1
+
+        result_sig *= in_sign
+
+        out_sig = scb.mk_unique_player(float_sig)
+        out_exp = scb.mk_unique_player(float_exp)
+        out_sig = result_sig
+        out_exp = result_exp
+        return float(out_sig, out_exp) 
+
+    def __add__(self, other):
+        input1_sig, input2_sig, result_sig = float_sig["#add.input1.sig", "#add.input2.sig", "#add.result.sig"]
+        input1_exp, input2_exp, result_exp = float_exp["#add.input1.exp", "#add.input2.exp", "#add.result.exp"]
+        exp1, exp2 = value["#add.exp1", "#add.exp2"]
+
+        exp1 = self.exp
+        exp2 = other.exp
+
+        if score var exp1 >= var exp2:
+            other_fix = other.shift(exp1 - exp2)
+            input2_sig = other_fix.sig
+            input2_exp = other_fix.exp
+            input1_sig = self.sig
+            input1_exp = self.exp
+            result_sig = input1_sig + input2_sig
+            result_exp = input1_exp
+        
+        if score var exp2 > var exp1:
+            self_fix = self.shift(exp2 - exp1)
+            input1_sig = self_fix.sig
+            input1_exp = self_fix.exp
+            input2_sig = other.sig
+            input2_exp = other.exp
+            result_sig = input1_sig + input2_sig
+            result_exp = input2_exp
+        
+        out_sig = scb.mk_unique_player(float_sig)
+        out_exp = scb.mk_unique_player(float_exp)
+        out_sig = result_sig
+        out_exp = result_exp
+        return float(out_sig, out_exp).normalize()
+    
+    def __mul__(self, other):
+        input1_sig, result_sig = float_sig["#mul.input1.sig", "#mul.result.sig"]
+        input1_exp, result_exp = float_exp["#mul.input1.exp", "#mul.result.exp"]
+        input1_sig = self.sig
+        input1_exp = self.exp
+
+        if type(other) == type(float(0,0)):
+            other = other.round().normalize()
+            input2_sig = float_sig["#mul.input2.sig"]
+            input2_exp = float_exp["#mul.input2.exp"]
+            input1_sign, input2_sign = value["#mul.input1.sign", "#mul.input2.sign"]
+            input2_sig = other.sig
+            input2_exp = other.exp
+            input1_sign = self.sign()
+            input2_sign = other.sign()
+
+            out = float(input1_sig * other.digit(0), input1_exp + input2_exp - precision)
+            for i in range(1, precision + 1):
+                out += float(input1_sig * other.digit(i), input1_exp + input2_exp - precision + i)
+            
+            result_sig = int.abs(out.sig) * input1_sign * input2_sign
+            result_exp = out.exp
+
+            out_sig = scb.mk_unique_player(float_sig)
+            out_exp = scb.mk_unique_player(float_exp)
+            out_sig = result_sig
+            out_exp = result_exp
+            return float(out_sig, out_exp).normalize()
+
+        else:
+            input2 = value["#mul.input2"]
+            input2 = other
+            result_sig = input1_sig * input2
+            result_exp = input1_exp
+
+            out_sig = scb.mk_unique_player(float_sig)
+            out_exp = scb.mk_unique_player(float_exp)
+            out_sig = result_sig
+            out_exp = result_exp
+            return float(out_sig, out_exp).normalize()
+    
+    def __sub__(self, other):
+        return self + (other * (-1))
+
+    def invert(self):
+        self = self.normalize()
+        input_sig, result_sig = float_sig["#invert.input.sig", "#invert.result.sig"]
+        input_exp, result_exp = float_exp["#invert.input.exp", "#invert.result.exp"]
+        input_sig = self.sig
+        input_exp = self.exp
+        result_sig = (1000000000 / (input_sig / (10 ** (precision - 4)))) * (10 ** (precision - 3))
+        result_exp = input_exp * (-1) - 2
+
+        out_sig = scb.mk_unique_player(float_sig)
+        out_exp = scb.mk_unique_player(float_exp)
+        out_sig = result_sig
+        out_exp = result_exp
+        return float(out_sig, out_exp).round().normalize()
+    
+    def __truediv__(self, other):
+        return self * other.invert()

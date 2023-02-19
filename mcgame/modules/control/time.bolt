@@ -1,0 +1,22 @@
+from bolt_expressions import Scoreboard
+import lib:global/scoreboard as scb
+import lib:global/utils as utils
+
+gtime = Scoreboard("global_time")["-time"]
+ptime = Scoreboard("global_time")
+
+
+# Init
+function utils.init_func():
+    scb.mk("global_time")
+    unless score var gtime matches -2147483648..-1:
+        gtime = -2147483648
+
+# Main
+function utils.main_func():
+    gtime += 1
+    ptime["@a"] += 1
+    as @a unless score var ptime["@s"] = var gtime run function lib:global/join:  # Función que ejecuta un jugador que se acaba de conectar.
+        utils.assign_uid("@s")
+        say hola
+    ptime["@a"] = gtime

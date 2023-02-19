@@ -1,0 +1,292 @@
+import os
+import os.path
+import PIL
+import json
+import numpy as np
+from PIL import Image
+from numpy import asarray
+from nbtlib import parse_nbt
+from bolt import Runtime
+from beet.library.resource_pack import Texture, Language, Font
+from bolt.contrib.defer import Defer
+from bolt_expressions import Scoreboard, identifier_generator
+import lib:global/scoreboard as scb
+import lib:global/utils as utils
+
+# Documentación:
+# 
+# 
+# 
+
+
+runtime = ctx.inject(Runtime)
+defer = ctx.inject(Defer)
+ASSETS_PATH = ctx.directory / f"res/assets/mcgame"
+CURRENT_PATH = ctx.directory / "src/data/lib/modules/gui"
+NAMESPACE = f"mcgame:actionbar"
+textures = ctx.assets.textures
+
+
+def _id_generator(input=None):
+    i = 0
+    while True:
+        yield i
+        i += 1
+
+
+def _unicode_generator(input=None):
+    i = 57344
+    while True:
+        if i == 63488:
+            i = 63552
+        out = chr(i)
+        yield out
+        i += 1
+
+
+def _condition_image(image):
+    image_vec = np.array(image)
+    width = len(image_vec[0])
+
+    padding = max(0, 65 - len(image_vec))
+    image_vec = np.vstack((np.zeros((padding, width, 4), dtype=np.uint8), image_vec))
+
+    if image_vec[0][0][3] == 0:
+        image_vec[0][0][3] = 1
+    if image_vec[0][-1][3] == 0:
+        image_vec[0][-1][3] = 1
+
+    return Image.fromarray(image_vec)
+
+def _expand_down(image, n):
+    image_vec = np.array(image)
+    width = len(image_vec[0])
+    image_vec = np.vstack((image_vec, np.zeros((n, width, 4), dtype=np.uint8)))
+    image_vec[-1][0][3] = 1
+    image_vec[-1][-1][3] = 1
+    return Image.fromarray(image_vec)
+
+def fill_horizontal_png(images, parameters, steps, step):
+    image_full = np.array(images[0])
+    image_empty = np.array(images[1])
+    start = parameters[0]
+    end = parameters[1]
+    step_size = (end - start) / (steps)
+
+    
+    if step_size >= 0:
+        image_out = image_empty.copy()
+        image_out[:, :round(start + step * step_size)] = image_full[:, :round(start + step * step_size)]
+    else:
+        image_out = image_full.copy()
+        image_out[:, :round(start + step * step_size)] = image_empty[:, :round(start + step * step_size)]
+
+    return Image.fromarray(image_out)
+
+
+def fill_vertical_png(images, parameters, steps, step):
+    image_full = np.array(images[0])
+    image_empty = np.array(images[1])
+    start = parameters[0]
+    end = parameters[1]
+    step_size = (end - start) / (steps)
+
+    
+    if step_size >= 0:
+        image_out = image_empty.copy()
+        image_out[:round(start + step * step_size)] = image_full[:round(start + step * step_size)]
+    else:
+        image_out = image_full.copy()
+        image_out[:round(start + step * step_size)] = image_empty[:round(start + step * step_size)]
+
+    return Image.fromarray(image_out)
+
+
+class ActionbarElement:
+    all_elements = set()
+
+    def __init__(self, name):
+        self.name = name
+        self.res_x = None
+        self.res_y = None
+        self.possible_y = {}
+        id = ctx.inject(_id_generator)
+        self.id = next(id)
+        ActionbarElement.all_elements.add(self)
+    
+    
+    def disable(self, player):
+        target = utils.selector(player)
+        execute as target:
+            for player_id in generate_tree(range(ctx.meta.config.max_players)):
+                append function player_id.parent:
+                    if player_id.partition(4):
+                        if score var Scoreboard("player_id")["@s"] matches player_id.range function player_id.children
+                    else:
+                        if score var Scoreboard("player_id")["@s"] matches player_id.value:
+                            stored_text = f'None'
+                            data modify storage NAMESPACE f"{player_id.value}[{self.id}]" set value stored_text
+    
+    def _get_id(self):
+        return self.id
+
+
+class UnicodeBar(ActionbarElement):
+    all_elements = set()
+
+    def __init__(self, source, max, name):
+        ActionbarElement.__init__(self, name)
+        self.source = source
+        self.max = max
+        UnicodeBar.all_elements.add(self)
+        self.images = []
+        while len(self.images) > self.max + 1:
+            self.images.append(None)
+    
+    def generate(self, function, list, parameters):
+        # "list" is a list of directories that point to images.
+        # "parameters" is a list.
+        # "function" takes in the images in "list", "parameters" and an integer.
+        images = []
+        for elem in list:
+            images.append(_condition_image(PIL.Image.open(ASSETS_PATH / elem).convert("RGBA")))
+
+        self.res_x = images[0].size[0]
+        self.res_y = images[0].size[1]
+        self.size_y = PIL.Image.open(ASSETS_PATH / list[0]).size[1]
+
+        self.images = []
+
+        for n in range(self.max + 1):
+            self.images.append(function(images, parameters, self.max, n))
+
+    def fetch_frame(self, directory, frame):
+        image = _condition_image(PIL.Image.open(ASSETS_PATH / directory).convert("RGBA"))
+        
+        self.res_x = image.size[0]
+        self.res_y = image.size[1]
+        self.size_y = PIL.Image.open(ASSETS_PATH / directory).size[1]
+
+        self.images[frame] = image
+
+    def update(self, player, position_x, position_y):  # Selector = jugador al que se actualiza
+        # Agregar la posición y al conjunto de posibles posiciones y (léase "y" como variable).
+        generate_entry = ctx.inject(_unicode_generator)
+        self.possible_y[position_y] = []
+        for i in range(self.max + 1):
+            self.possible_y[position_y].append(next(generate_entry))
+
+        # Calcular la posición x apropiada
+        q = self.res_x % 2
+
+        # Editar efectivamente el data storage
+        target = utils.selector(player)
+        _root = runtime.modules.current_path
+        @defer
+        def _position_bars():
+            execute as target:
+                for player_id in generate_tree(range(ctx.meta.config.max_players), root=_root):
+                    append function player_id.parent:
+                        if player_id.partition(4):
+                            if score var Scoreboard("player_id")["@s"] matches player_id.range function player_id.children
+                        else:
+                            if score var Scoreboard("player_id")["@s"] matches player_id.value:
+                                for node in generate_tree(range(self.max + 1), root=_root):
+                                    append function node.parent:
+                                        if node.partition(4):
+                                            if score var self.source matches node.range function node.children
+                                        else:
+                                            if score var self.source matches node.value:
+                                                ordered_elements = sorted(ActionbarElement.all_elements, key=ActionbarElement._get_id)
+                                                message_width = -1
+                                                for elem in ordered_elements:
+                                                    message_width += elem.res_x + 1
+
+                                                current_position = (- message_width // 2)
+                                                for elem in ordered_elements[:self.id]:
+                                                    current_position += elem.res_x + 1
+
+                                                stored_text = ''
+                                                stored_text += f'['
+                                                stored_text += f'    {{'[4:]
+                                                stored_text += f'        "translate":"offset.{position_x-current_position}",'[8:]
+                                                stored_text += f'        "with": ['[8:]
+                                                stored_text += f'            {{'[12:]
+                                                stored_text += f'                "text":"{self.possible_y[position_y][node.value]}",'[16:]
+                                                stored_text += f'                "color":"#4e5c24"'[16:]
+                                                stored_text += f'            }}'[12:]
+                                                stored_text += f'        ]'[8:]
+                                                stored_text += f'    }}'[4:]
+                                                stored_text += f']'
+
+                                                data modify storage NAMESPACE f"{player_id.value}[{self.id}]" set value stored_text
+
+
+def display(player):
+    target = utils.selector(player)
+    execute as target:
+        for player_id in generate_tree(range(ctx.meta.config.max_players)):
+            append function player_id.parent:
+                if player_id.partition(4):
+                    if score var Scoreboard("player_id")["@s"] matches player_id.range function player_id.children
+                else:
+                    if score var Scoreboard("player_id")["@s"] matches player_id.value:
+                        message = f'{{"storage":"{NAMESPACE}","nbt":"{player_id.value}[]","separator":"","interpret":true,"color":"#4e5c24"}}'
+                        title @s actionbar json.loads(message)
+
+
+# Construcción de las barras
+init_function = utils.init_func()
+@defer  # Es necesario poner esto para que se pueda leer bien la lista de todas las barras creadas después del Runtime.
+def deferred_actionbars():
+    if len(ActionbarElement.all_elements) != 0:
+        empty_data = ""
+        for i in range(ctx.meta.config.max_players):
+            empty_data += f'{i}:['
+            for j in ActionbarElement.all_elements:
+                empty_data += f'{"None"},'
+            empty_data = empty_data[0:-1]
+            empty_data += f'],'
+        empty_data = "{" + empty_data[0:-1] + "}"
+        empty_data = parse_nbt(empty_data)
+        function init_function:
+            data merge storage NAMESPACE empty_data
+        
+
+        languages = ctx.assets.languages
+        fonts = ctx.assets.fonts
+
+
+        for element in UnicodeBar.all_elements:
+            for height in element.possible_y:
+                for amount, unicode_id in enumerate(element.possible_y[height]):
+                    difference = height + max(element.res_y - 65, 0) - element.size_y + 1 - element.res_y
+                    font_namespace = f"mcgame:font/{element.name}_{amount}"
+                    final_height = element.res_y
+                    if final_height > 256:
+                        raise ValueError(f"{element.name} image is too tall. Maximum image height is 256 pixels.")
+                    if difference > 0:
+                        textures[font_namespace] = Texture(_expand_down(element.images[amount], difference))
+                        final_height += difference
+                        if final_height > 256:
+                            raise ValueError(f"{element.name} is being updated too high. It should be {height + max(element.res_y - 65, 0) - element.size_y + 1 - 256} pixels below.")
+                    else:
+                        textures[font_namespace] = Texture(element.images[amount])
+                    merge font minecraft:default {
+                        "providers": [
+                            {
+                                "type": "bitmap",
+                                "file": f"mcgame:font/{element.name}_{amount}.png",
+                                "ascent": (height + max(element.res_y - 65, 0) - element.size_y + 1),
+                                "height": final_height,
+                                "chars": [unicode_id]
+                            }
+                        ]
+                    }
+
+
+        textures["space:font/space_nosplit"] = Texture(source_path = CURRENT_PATH / "private/actionbar/space_nosplit.png")
+        textures["space:font/space_split"] = Texture(source_path = CURRENT_PATH / "private/actionbar/space_split.png")
+        languages["space:en_us"] = Language(source_path = CURRENT_PATH / "private/actionbar/lang.json")
+        fonts["space:default"] = Font(source_path = CURRENT_PATH / "private/actionbar/space_default.json")
+

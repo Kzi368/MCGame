@@ -1,0 +1,30 @@
+from bolt_expressions import Scoreboard
+import lib:global/utils as utils
+
+class GameMode:
+    def __init__(self, name, init_function, main_function):
+        self.name = name
+        self.init = init_function
+        self.main = main_function
+
+
+class GameState:
+    def __init__(self, name):
+        self.name = name
+
+
+class PlayerState:
+    def __init__(self,name):
+        self.name = name
+
+
+def switch_to_gamemode(gamemode, player):
+    target = utils.selector(player)
+    execute as target:
+        for player_id in generate_tree(range(ctx.meta.config.max_players)):
+            append function player_id.parent:
+                if player_id.partition(4):
+                    if score var Scoreboard("player_id")["@s"] matches player_id.range function player_id.children
+                else:
+                    if score var Scoreboard("player_id")["@s"] matches player_id.value:
+                        data modify storage mcgame:control GameMode[player_id.value] set value "gamemode.name"

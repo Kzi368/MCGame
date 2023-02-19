@@ -1,0 +1,38 @@
+from bolt_expressions import Scoreboard
+from bolt import Runtime
+from mecha import Mecha
+import lib:global/scoreboard as scb
+
+
+mc = ctx.inject(Mecha)
+
+
+def init_func():
+    current_path = ctx.inject(Runtime).modules.current_path
+    return f"{current_path}/init"
+
+def main_func():
+    current_path = ctx.inject(Runtime).modules.current_path
+    return f"{current_path}/main"
+
+def find_current_path():
+    current_path = ctx.inject(Runtime).modules.current_path
+    return f"{current_path}"
+
+def selector(entity):
+    return mc.parse(entity, using="selector")
+
+def assign_uid(player):
+    target = selector(player)
+    id = Scoreboard("player_id")["@s"]
+    as target unless score var id matches 0..:
+        next = Scoreboard("player_id")[".next"]
+        id = next
+        next += 1
+
+def reset_uid():
+    scb.rm("player_id")
+    scb.mk("player_id")
+
+function init_func():
+    scb.mk("player_id")
