@@ -1,6 +1,6 @@
 require:
   - bolt
-  - fixme
+  - mcgame
 data_pack:
   load: "src"
 pipeline:

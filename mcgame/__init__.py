@@ -1,4 +1,4 @@
-__version__ = "0.2.8"
+__version__ = "0.0.1"
 
 
 from beet import Context
@@ -9,7 +9,7 @@ def beet_default(ctx: Context):
     ctx.require(
         load(
             data_pack={
-                "data/fixme/modules": "@fixme/modules",
+                "data/mcgame/modules": "@mcgame/modules",
             },
         ),
     )

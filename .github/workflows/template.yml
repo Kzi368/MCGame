@@ -20,41 +20,41 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPOSITORY: ${{ github.repository }}
           README: |
-            # fixme_repo_name
+            # MCGame
 
-            [![GitHub Actions](fixme_repo_url/workflows/CI/badge.svg)](fixme_repo_url/actions)
+            [![GitHub Actions](https://github.com/Kzi368/MCGame/workflows/CI/badge.svg)](https://github.com/Kzi368/MCGame/actions)
 
-            > fixme_repo_description
+            > A Minecraft game framework.
 
             ## Installation
 
             ```bash
-            pip install fixme
+            pip install mcgame
             ```
 
             ---
 
-            License - [MIT](fixme_repo_url/blob/main/LICENSE)
+            License - [MIT](https://github.com/Kzi368/MCGame/blob/main/LICENSE)
         run: |
           set -e
 
           package_name=$(basename "$PWD" | sed "s/[^a-zA-Z0-9]/_/g" | tr '[:upper:]' '[:lower:]')
           repo=$(gh api "/repos/$GH_REPOSITORY")
 
-          mv fixme "$package_name"
+          mv mcgame "$package_name"
           echo "$README" > README.md
-          sed -i 's/version = ".*"/version = "0.0.0"/' pyproject.toml
-          sed -i 's/__version__ = ".*"/__version__ = "0.0.0"/' "$package_name/__init__.py"
+          sed -i 's/version = ".*"/version = "0.0.1"/' pyproject.toml
+          sed -i 's/__version__ = ".*"/__version__ = "0.0.1"/' "$package_name/__init__.py"
           rm CHANGELOG.md
           rm .github/workflows/template.yml
 
           files=$(find * -type f)
-          sed -i "s|fixme_user_name|$(git show -s --format=%an)|g" $files
-          sed -i "s|fixme_user_email|$(git show -s --format=%ae)|g" $files
-          sed -i "s|fixme_repo_name|$(echo "$repo" | jq -r .name)|g" $files
-          sed -i "s|fixme_repo_description|$(echo "$repo" | jq -r '.description // ""')|g" $files
-          sed -i "s|fixme_repo_url|$(echo "$repo" | jq -r .html_url)|g" $files
-          sed -i "s|fixme|$package_name|g" $files
+          sed -i "s|Kzi368|$(git show -s --format=%an)|g" $files
+          sed -i "s|casiel.joshua@gmail.com|$(git show -s --format=%ae)|g" $files
+          sed -i "s|MCGame|$(echo "$repo" | jq -r .name)|g" $files
+          sed -i "s|A Minecraft game framework.|$(echo "$repo" | jq -r '.description // ""')|g" $files
+          sed -i "s|https://github.com/Kzi368/MCGame|$(echo "$repo" | jq -r .html_url)|g" $files
+          sed -i "s|mcgame|$package_name|g" $files
 
           git config --global user.name "$(git show -s --format=%an)"
           git config --global user.email "$(git show -s --format=%ae)"

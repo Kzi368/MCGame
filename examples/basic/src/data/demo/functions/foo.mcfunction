@@ -1,3 +1,3 @@
-from fixme:basic import hello_world
+from mcgame:basic import hello_world
 
 hello_world()

@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "fixme"
-version = "0.2.8"
-description = "fixme_repo_description"
-authors = ["fixme_user_name <fixme_user_email>"]
+name = "MCGame"
+version = "0.0.1"
+description = "A Minecraft game framework."
+authors = ["Kzi368 <casiel.joshua@gmail.com>"]
 license = "MIT"
 
-homepage = "fixme_repo_url"
+homepage = "https://github.com/Kzi368/MCGame"
 readme = "README.md"
 
 keywords = [
@@ -16,7 +16,7 @@ keywords = [
   "mcfunction",
 ]
 
-include = ["fixme/py.typed"]
+include = ["mcgame/py.typed"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -46,7 +46,7 @@ profile = "black"
 
 [tool.semantic_release]
 branch = "main"
-version_variable = "fixme/__init__.py:__version__"
+version_variable = "mcgame/__init__.py:__version__"
 version_toml = "pyproject.toml:tool.poetry.version"
 major_on_zero = false
 upload_to_repository = false
