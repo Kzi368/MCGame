@@ -1,10 +1,17 @@
 from bolt_expressions import Scoreboard
 import lib:global/utils as utils
 
+class Game:
+    def __init__(self, directory):
+        self.directory = directory
+
+
 class GameMode:
-    def __init__(self, name, init_function, main_function):
+    def __init__(self, directory):
+        self.directory = directory
         self.name = name
-        self.init = init_function
+        self.enter = enter_function
+        self.leave = leave_function
         self.main = main_function
 
 

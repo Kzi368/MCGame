@@ -1,0 +1,72 @@
+import numpy as np
+from numpy.polynomial import Polynomial
+from math import factorial
+
+def _list_prod(l1, l2):
+    out = []
+    for i in range(len(l1)):
+        out.append(l1[i] * l2[i])
+    return out
+
+def _list_sum(list):
+    out = list[0]
+    for i in range(len(list))[1:]:
+        out += list[i]
+    return out
+
+def _func_list_eval(list, x):
+    out = []
+    for f in list:
+        out.append(f(x))
+    return out
+
+def binomc(n, k):
+    return factorial(n) // factorial(k) // factorial(n - k)
+
+class Curve:
+    def __init__(self, traj = []):
+        self.trajectory = traj
+    
+    def velocity(self):
+        out = []
+        for t in range(len(self.trajectory) - 1):
+            out.append(self(t+1) - self(t))
+        return Curve(out)
+    
+    def speed(self):
+        out = []
+        for t in range(len(self.trajectory) - 1):
+            out.append(np.linalg.norm(self(t+1) - self(t)))
+        return out
+
+    def __add__(self, other):
+        out = []
+        out.extend(self.trajectory)
+        out.extend(other.trajectory)
+        return Curve(out)
+    
+    def __repr__(self):
+        return str(self.trajectory)
+    
+    def __call__(self, t):
+        return self.trajectory[t]
+
+
+class CurveBezier(Curve):
+    def __init__(self, points = [], resolution = 2):
+        self.trajectory = []
+        if type(points[0]) == type([]):  # If a list of lists is given
+            pass  # TODO concatenar curvas
+        else:  # If a list of points is given
+            deg = len(points) - 1
+            poly_list = []
+            for i in range(deg + 1):
+                poly_list.append(binomc(deg, i) * (Polynomial([1, -1]) ** (deg - i) * (Polynomial([0, 1]) ** i)))
+
+            for t in range(resolution):
+                t /= resolution - 1
+                self.trajectory.append(_list_sum(_list_prod(points, _func_list_eval(poly_list, t))))
+
+
+class CurveParametric(Curve):
+    pass  # TODO curvas paramétricas

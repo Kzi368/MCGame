@@ -3,5 +3,7 @@ require:
   - mcgame
 data_pack:
   load: "src"
+resource_pack:
+  load: "res"
 pipeline:
   - mecha
