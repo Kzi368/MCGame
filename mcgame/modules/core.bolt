@@ -3,7 +3,7 @@ function mcgame:main:
     schedule function mcgame:main 1t
 
 function mcgame:entity_main:
-    raw "# hii"
+    raw "# hi"
 
 function mcgame:load:
     function mcgame:main
