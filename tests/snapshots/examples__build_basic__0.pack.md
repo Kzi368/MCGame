@@ -49,14 +49,14 @@ function mcgame:main
 
 ```
 
-`@function demo:test`
+`@function demo:summon`
 
 ```mcfunction
 summon zombie ~2 ~ ~ {Glowing: 1b, Passengers: [{id: "minecraft:marker", UUID: [I; 0, 0, 0, 0]}]}
-execute as 00000000-0000-0000-0000-000000000000 run function demo:test/nested_execute_0
+execute as 00000000-0000-0000-0000-000000000000 run function demo:summon/nested_execute_0
 ```
 
-`@function demo:test/nested_execute_0`
+`@function demo:summon/nested_execute_0`
 
 ```mcfunction
 execute on vehicle run tag @s add mcgame_hola
