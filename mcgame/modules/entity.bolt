@@ -1,0 +1,54 @@
+__all__ = [
+    "MCEntity",
+]
+
+import json
+from nbtlib import parse_nbt
+from ./utils import uuid_generator, uuid_numbers
+
+ASSETS_PATH = ctx.directory / "res/assets/mcgame"
+
+class MCEntity:
+    id_list = set()
+
+    def __init__(self, id, entity, data=None, load=None, tick=None, scores=None):  # TODO: Aceptar listas de scripts como input.
+        self.id = f"mcgame_{id}"
+        self.entity = entity
+        if not data is None: 
+            self.data = data.content
+        else:
+            self.data = None
+        if not load is None: 
+            self.load = load.content
+        else:
+            self.load = None
+        if not tick is None:
+            self.tick = tick.content
+        else:
+            self.tick = None
+        if not scores is None: 
+            self.scores = scores.content
+        else:
+            self.scores = []
+
+        if self.id not in MCEntity.id_list:
+            ctx.data[f"mcgame:{self.id}_main"] = self.tick
+            append function mcgame:entity_main:
+                as @e[tag=self.id,type=entity] at @s:
+                    function f"mcgame:{self.id}_main"
+            MCEntity.id_list.add(self.id)
+    
+    def summon(self):  # TODO: Overhaul del sistema de spawn
+        marker_id = next(uuid_generator)
+        u1, u2, u3, u4 = uuid_numbers(marker_id)
+        nbt_entity = parse_nbt(self.data)
+        nbt_marker = parse_nbt(f"{{Passengers:[{{id:'minecraft:marker',UUID:[I;{u1},{u2},{u3},{u4}]}}]}}")
+        nbt_entity.merge(nbt_marker)  # TODO: Agregar WARN para cuando el merge sobreescribe información.
+        summon self.entity ~2 ~ ~ nbt_entity
+        as marker_id:
+            on vehicle:
+                tag @s add self.id
+                for obj in self.scores:
+                    scoreboard players set @s obj 1
+            kill @s
+

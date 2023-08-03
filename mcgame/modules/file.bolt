@@ -1,0 +1,22 @@
+__all__ = [
+    "MCScript",
+    "MCData"
+]
+
+import json
+from beet.library.data_pack import Function
+from beet.core.file import JsonFile
+
+ASSETS_PATH = ctx.directory / "res/assets/mcgame"
+
+
+class MCScript:
+    def __init__(self, dir):
+        self.dir = ASSETS_PATH / f"{dir}.mcfunction"
+        self.content = Function(source_path=self.dir)
+
+
+class MCData:
+    def __init__(self, dir):
+        self.dir = ASSETS_PATH / f"{dir}.txt"
+        self.content = JsonFile(source_path=self.dir).text

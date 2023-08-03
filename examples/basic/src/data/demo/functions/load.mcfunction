@@ -1,0 +1,1 @@
+import mcgame:core as core

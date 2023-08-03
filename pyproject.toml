@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "mcame"
+name = "mcgame"
 version = "0.0.1"
 description = "A Minecraft game framework."
 authors = ["Kzi368 <casiel.joshua@gmail.com>"]
@@ -23,6 +23,8 @@ python = "^3.10"
 beet = ">=0.79.0"
 mecha = ">=0.57.4"
 bolt = ">=0.19.3"
+bolt-expressions = ">=0.12.2"
+pillow = "^9.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.1.3"

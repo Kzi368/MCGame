@@ -1,0 +1,17 @@
+function mcgame:main:
+    function mcgame:entity_main
+    schedule function mcgame:main 1t
+
+function mcgame:entity_main:
+    raw "# hi"
+
+function mcgame:load:
+    function mcgame:main
+
+merge function_tag minecraft:load {
+  "values": [
+    "mcgame:load"
+  ]
+}
+
+

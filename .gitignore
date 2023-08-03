@@ -10,3 +10,5 @@ dist/
 # Cache
 .beet_cache/
 .pytest_cache/
+
+run.bat

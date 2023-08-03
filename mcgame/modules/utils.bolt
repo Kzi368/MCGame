@@ -1,38 +1,32 @@
-from bolt_expressions import Scoreboard
-from bolt import Runtime
-from mecha import Mecha
-import lib:global/scoreboard as scb
+from nbtlib import Compound
 
+__all__ = [
+    "nbt_conflict",
+    "uuid_generator",
+    "uuid_numbers",
+]
 
-mc = ctx.inject(Mecha)
+def nbt_conflict(nbt1, nbt2):
+    for key, value in nbt2.items():
+        if not (key in nbt1 and (
+            isinstance(nbt1[key], Compound) and isinstance(value, dict)
+        )):
+            return True
+    return False
 
+def _new_uuid():
+    i = 0
+    while True:
+        h = hex(i)[2:]
+        h = "0"*(32-len(h)) + h
+        yield f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
+        i += 1
 
-def init_func():
-    current_path = ctx.inject(Runtime).modules.current_path
-    return f"{current_path}/init"
+def uuid_numbers(n):
+    a = int("0x" + n[:8], 16)
+    b = int("0x" + n[9:13] + n[14:18], 16)
+    c = int("0x" + n[19:23] + n[24:28], 16)
+    d = int("0x" + n[28:], 16)
+    return (a,b,c,d)
 
-def main_func():
-    current_path = ctx.inject(Runtime).modules.current_path
-    return f"{current_path}/main"
-
-def find_current_path():
-    current_path = ctx.inject(Runtime).modules.current_path
-    return f"{current_path}"
-
-def selector(entity):
-    return mc.parse(entity, using="selector")
-
-def assign_uid(player):
-    target = selector(player)
-    id = Scoreboard("player_id")["@s"]
-    as target unless score var id matches 0..:
-        next = Scoreboard("player_id")[".next"]
-        id = next
-        next += 1
-
-def reset_uid():
-    scb.rm("player_id")
-    scb.mk("player_id")
-
-function init_func():
-    scb.mk("player_id")
+uuid_generator = _new_uuid()
