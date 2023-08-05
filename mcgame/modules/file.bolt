@@ -4,19 +4,34 @@ __all__ = [
 ]
 
 import json
+import logging
 from beet.library.data_pack import Function
 from beet.core.file import JsonFile
 
 ASSETS_PATH = ctx.directory / "res/assets/mcgame"
+logger = logging.getLogger("mcgame")
 
 
-class MCScript:
+class MCAsset:
     def __init__(self, dir):
-        self.dir = ASSETS_PATH / f"{dir}.mcfunction"
+        self.short_dir = dir
+        self.dir = ASSETS_PATH / f"{dir}"
+        logger.debug(f"Loaded asset {self.dir}.")
+        self.type = "MCAsset"
+    
+    def __repr__(self):
+        return f"{self.type} at {self.short_dir}"
+
+
+class MCScript(MCAsset):
+    def __init__(self, dir):
+        super().__init__(dir)
         self.content = Function(source_path=self.dir)
+        self.type = "MCScript"
 
 
-class MCData:
+class MCData(MCAsset):
     def __init__(self, dir):
-        self.dir = ASSETS_PATH / f"{dir}.txt"
+        super().__init__(dir)
         self.content = JsonFile(source_path=self.dir).text
+        self.type = "MCData"

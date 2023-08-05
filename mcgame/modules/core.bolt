@@ -1,11 +1,17 @@
+"""
+This is the main MCGame file. It will create the necessary core functions
+that will be used to create the datapack.
+"""
+
 function mcgame:main:
     function mcgame:entity_main
     schedule function mcgame:main 1t
 
 function mcgame:entity_main:
-    raw "# hi"
+    raw # hi
 
 function mcgame:load:
+    function mcgame:entity_load
     function mcgame:main
 
 merge function_tag minecraft:load {

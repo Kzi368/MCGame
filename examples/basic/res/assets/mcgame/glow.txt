@@ -1,0 +1,4 @@
+{
+    Glowing: 1b,
+    PersistenceRequired: 1b
+}

@@ -1,0 +1,14 @@
+{
+    HandItems:[
+        {
+            id:"minecraft:stone_sword",
+            Count:1b,
+            tag:{
+                Enchantments:[
+                    {id:"minecraft:knockback",lvl:5s}
+                ]
+            }
+        },
+        {}
+    ]
+}

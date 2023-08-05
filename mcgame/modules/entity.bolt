@@ -3,52 +3,174 @@ __all__ = [
 ]
 
 import json
+import logging
+import copy
+from beet import Context, Function
 from nbtlib import parse_nbt
-from ./utils import uuid_generator, uuid_numbers
+from ./utils import uuid_generator, uuid_numbers, nbt_conflict
 
 ASSETS_PATH = ctx.directory / "res/assets/mcgame"
+logger = logging.getLogger("mcgame")
+
+
+def _listify(n):
+    """Converts input into a list."""
+    if n is None:
+        return []
+    if not isinstance(n, list):
+        return [n]
+    return n
+
+def _merge_script_list(list, namespace):
+    """Merges a list of scripts into a mcfunction.
+    Leftmost scripts will run first.
+    """
+    scripts = copy.deepcopy(list)
+    ctx.data[namespace] = Function([""])
+    for script in scripts:
+        ctx.data.functions[namespace].append(script.content)
+
+def _merge_data_list(list):
+    """Merges a list of data files and returns an nbt compound.
+    Rightmost files will have highest priority when resolving
+    conflicts.
+    """
+    compounds = copy.deepcopy(list)
+    out = parse_nbt("{}")
+    for i, compound in enumerate(compounds):
+        if nbt_conflict(out, parse_nbt(compound.content)):
+            logger.info(f"NBT from {list[i-1]} has been overwritten by {compound}")
+        out.merge(parse_nbt(compound.content))
+    return out
+
+
+HOLDER_COORDS = (500004, 0, 500004)  # TODO: implement configurable coordinates
+
 
 class MCEntity:
+    """Class for creating entity types compatible with scripts.
+
+    Other MCGame objects, such as scripts and data files, can be
+    associated with instances of this class.
+
+    Parameters
+    ----------
+    id : str
+        The name of the class instance. It is used to tag the summoned
+        entities and name internal functions.
+    entity : str
+        Base minecraft entity that is going to be used.
+    data : MCData or list of MCData, optional
+        File containing NBT data for summoning the entity.
+    spawn, tick : MCScript or list of MCScript, optional
+        Scripts that will run at entity spawn, and every tick. The
+        context for script execution is @s = spawned entity. Location
+        is also at @s.
+    scores : ???, optional  # TODO: implement scoreboard.
+        Initial scores for the entity when summoned.
+    
+    Attributes
+    ----------
+    id : str
+        The name of the class instance. It is used to tag the summoned
+        entities and name internal functions.
+    entity : str
+        Base minecraft entity that is going to be used.
+    data : list of MCData
+        File containing NBT data for summoning the entity.
+    spawn, tick : list of MCScript
+        Scripts that will run at entity spawn, and every tick. The
+        context for script execution is @s = spawned entity. Location
+        is also at @s.
+    scores : ???  # TODO: implement scoreboard.
+        Initial scores for the entity when summoned.
+    holder_entity : str or None
+        The UUID of an entity that controls the ticking of entities
+        from an instance of this class. Defaults to None when entity
+        won't tick.
+
+    Notes
+    -----
+    For running the spawn script, a marker of known UUID is also
+    spawned as passenger when spawning a new entity from a class
+    instance. For running the script as the spawned entity, the
+    following structure is used:
+    execute as <marker UUID> on vehicle at @s run ...
+    After the spawn script is executed, the marker is killed. 
+    For ticking the entities that have a tick script, a manager entity
+    of known UUID is summoned. When spawning a new entity from a class
+    instance, a snowball is also spawned as passenger. It will save the
+    entity's UUID in its Owner data and then be teleported to the
+    manager entity. For running the script as the spawned entity, the
+    following structure is used:
+    execute as <manager UUID> on passengers on origin at @s run ...
+    Note that a snowball is necessary for this procedure, since it's
+    the cheapest entity (performance-wise) that can hold Owner data,
+    which is a must for using execute on origin.
+    """
+
     id_list = set()
 
-    def __init__(self, id, entity, data=None, load=None, tick=None, scores=None):  # TODO: Aceptar listas de scripts como input.
+    def __init__(self, id, entity, data=None, spawn=None, tick=None, scores=None):
+        logger.debug(f"Created MCEntity type {id}.")
         self.id = f"mcgame_{id}"
         self.entity = entity
-        if not data is None: 
-            self.data = data.content
-        else:
-            self.data = None
-        if not load is None: 
-            self.load = load.content
-        else:
-            self.load = None
-        if not tick is None:
-            self.tick = tick.content
-        else:
-            self.tick = None
-        if not scores is None: 
-            self.scores = scores.content
-        else:
-            self.scores = []
+        self.data = _listify(data)
+        self.spawn = _listify(spawn)
+        self.tick = _listify(tick)
+        self.scores = _listify(scores)
+        self.holder_entity = None        
 
+        # Set up the entity scripts.
         if self.id not in MCEntity.id_list:
-            ctx.data[f"mcgame:{self.id}_main"] = self.tick
-            append function mcgame:entity_main:
-                as @e[tag=self.id,type=entity] at @s:
-                    function f"mcgame:{self.id}_main"
+            if self.spawn != None:
+                _merge_script_list(self.spawn, f"mcgame:{self.id}_spawn")
+            if self.tick != None:
+                self.holder_entity = next(uuid_generator)
+                append function mcgame:entity_load:
+                    x, y, z = HOLDER_COORDS
+                    positioned x y z:
+                        h1, h2, h3, h4 = uuid_numbers(self.holder_entity)
+                        nbt_spawn = parse_nbt(f"{{Tags:['mcgame_core_entity'],UUID:[I;{h1},{h2},{h3},{h4}]}}")
+                        summon minecraft:item_display ~ ~ ~ nbt_spawn
+                _merge_script_list(self.tick, f"mcgame:{self.id}_main")
+                append function mcgame:entity_main:
+                    as self.holder_entity on passengers:
+                        # Run tick script and check if ticking entity is still alive
+                        scoreboard players set #logic owner_is_alive 0
+                        on origin at @s:
+                            scoreboard players set #logic owner_is_alive 1
+                            function f"mcgame:{self.id}_main"
+                        if score #logic owner_is_alive matches 0 scoreboard players set @s kill_queue 1
+                        scoreboard players reset #logic owner_is_alive
+                        kill @s[scores={kill_queue=1}]
             MCEntity.id_list.add(self.id)
+
     
-    def summon(self):  # TODO: Overhaul del sistema de spawn
+    def summon(self, coords="~ ~ ~"):  # TODO: Spawner blocks
         marker_id = next(uuid_generator)
         u1, u2, u3, u4 = uuid_numbers(marker_id)
-        nbt_entity = parse_nbt(self.data)
-        nbt_marker = parse_nbt(f"{{Passengers:[{{id:'minecraft:marker',UUID:[I;{u1},{u2},{u3},{u4}]}}]}}")
-        nbt_entity.merge(nbt_marker)  # TODO: Agregar WARN para cuando el merge sobreescribe información.
-        summon self.entity ~2 ~ ~ nbt_entity
+        nbt_entity = _merge_data_list(self.data)
+        nbt_marker = parse_nbt(f"{{Passengers:[ {{ id:'minecraft:marker',UUID:[I;{u1},{u2},{u3},{u4}] }},{{id:'minecraft:snowball',NoGravity:1b,Tags:['mcgame_core_entity']}} ] }}")
+        nbt_entity.merge(nbt_marker)
+        summon self.entity coords nbt_entity
         as marker_id:
-            on vehicle:
+            on vehicle at @s:
+                if self.spawn != None:
+                    function f"mcgame:{self.id}_spawn"
+                if self.tick != None:
+                    tag @s add mcgame_ticking 
                 tag @s add self.id
-                for obj in self.scores:
-                    scoreboard players set @s obj 1
+                data modify entity @e[type=minecraft:snowball,distance=..5,limit=1,sort=nearest] Owner set from entity @s UUID  # TODO: replace this with macro
+                as @e[type=minecraft:snowball,distance=..5,limit=1,sort=nearest]:  # BUG: do not spawn mobs near each other at the same time
+                    ride @s dismount
+                    ride @s mount self.holder_entity
+#                for obj in self.scores:
+#                    scoreboard players set @s obj 1  # TODO: implement scoreboard support
             kill @s
 
+append function mcgame:entity_load:
+    x, y, z = HOLDER_COORDS
+    forceload add x z
+    scoreboard objectives add owner_is_alive dummy
+    scoreboard objectives add kill_queue dummy

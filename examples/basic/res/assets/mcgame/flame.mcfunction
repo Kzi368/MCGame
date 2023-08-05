@@ -1,1 +1,1 @@
-particle flame
+particle flame ~ ~1 ~

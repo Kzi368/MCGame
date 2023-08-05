@@ -1,0 +1,8 @@
+{
+    ArmorItems:[
+        {},
+        {},
+        {id:"minecraft:leather_chestplate",Count:1b},
+        {id:"minecraft:leather_helmet",Count:1b}
+    ]
+}

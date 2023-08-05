@@ -1,0 +1,5 @@
+{
+    ActiveEffects:[
+        {Id:14,Amplifier:1b,Duration:400,ShowParticles:0b}
+    ]
+}

@@ -6,13 +6,19 @@ __all__ = [
     "uuid_numbers",
 ]
 
+
 def nbt_conflict(nbt1, nbt2):
     for key, value in nbt2.items():
-        if not (key in nbt1 and (
+        if key in nbt1 and (
             isinstance(nbt1[key], Compound) and isinstance(value, dict)
-        )):
-            return True
+        ):
+            if nbt_conflict(nbt1[key], value):
+                return True
+        else:
+            if (key in nbt1) and (value != nbt1[key]):
+                return True
     return False
+
 
 def _new_uuid():
     i = 0
@@ -22,11 +28,13 @@ def _new_uuid():
         yield f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
         i += 1
 
+
 def uuid_numbers(n):
     a = int("0x" + n[:8], 16)
     b = int("0x" + n[9:13] + n[14:18], 16)
     c = int("0x" + n[19:23] + n[24:28], 16)
     d = int("0x" + n[28:], 16)
     return (a,b,c,d)
+
 
 uuid_generator = _new_uuid()
