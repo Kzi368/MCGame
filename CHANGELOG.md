@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.0 (2023-08-05)
+
+### Feature
+
+* Basic entity scripting and docstrings ([`f21e458`](https://github.com/Kzi368/mcgame/commit/f21e4587d6ec460ca6c14d649d339a12a58c1c01))
+
+### Fix
+
+* Fixed example test ([`44eeb10`](https://github.com/Kzi368/mcgame/commit/44eeb1096f67d00bad8d36154fe34cad8f1b1528))
+
 ## v0.1.0 (2023-08-04)
 
 ### Feature
